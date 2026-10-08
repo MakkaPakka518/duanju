@@ -26,9 +26,12 @@ if (!/^https?:\/\/[^/?#\s]+(?:\/\d+)?$/i.test(normalized)) {
 }
 
 const template = readFileSync(join(__dirname, "duanju.template.js"), "utf8");
-const output = template.replace(/__API_BASE__/g, normalized);
+const output = template
+  .replace(/__API_BASE__/g, normalized)
+  .replace(/__COVER_BASE__/g, normalized + "/cover");
 const outPath = argValue("--out") || join(__dirname, "duanju.js");
 writeFileSync(outPath, output, "utf8");
 
 console.log("已生成模块: " + outPath);
 console.log("apiBase = " + normalized);
+console.log("coverWorker = " + normalized + "/cover");

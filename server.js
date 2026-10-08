@@ -111,10 +111,64 @@ function serveDuanju(res) {
   res.end(readFileSync(p, "utf8"));
 }
 
+/* ---------- 5b) 黄果封面解密代理 /cover?url=... ---------- */
+const COVER_ALLOWED_HOSTS = new Set(["pic.fisawck.cn", "pic.tuafjz.cn", "expose.eisees.com", "pic.tkzdds.cn", "pic.wirqed.cn"]);
+const COVER_MEDIA_KEY = new TextEncoder().encode("f5d965df75336270");
+const COVER_MEDIA_IV = new TextEncoder().encode("97b60394abc2fbe1");
+
+function detectImageType(bytes) {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "image/png";
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return "image/gif";
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return "image/webp";
+  return "application/octet-stream";
+}
+
+async function serveCover(req, res, query) {
+  const urlParam = String(query.get("url") || "").trim();
+  let sourceUrl;
+  try { sourceUrl = new URL(urlParam); } catch { sourceUrl = null; }
+  if (!sourceUrl || sourceUrl.protocol !== "https:" || !COVER_ALLOWED_HOSTS.has(sourceUrl.hostname)) {
+    res.writeHead(403, { "content-type": "text/plain; charset=utf-8", "access-control-allow-origin": "*" });
+    res.end("Source host is not allowed");
+    return;
+  }
+  try {
+    const upstream = await fetch(sourceUrl.toString(), {
+      headers: { "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8", "Referer": "https://huangguoai.com/" }
+    });
+    if (!upstream.ok) {
+      res.writeHead(upstream.status, { "content-type": "text/plain; charset=utf-8", "access-control-allow-origin": "*" });
+      res.end("Cover request failed");
+      return;
+    }
+    const encrypted = new Uint8Array(await upstream.arrayBuffer());
+    if (!encrypted.length || encrypted.length % 16 !== 0) {
+      res.writeHead(502, { "content-type": "text/plain; charset=utf-8", "access-control-allow-origin": "*" });
+      res.end("Invalid encrypted cover");
+      return;
+    }
+    const key = await crypto.subtle.importKey("raw", COVER_MEDIA_KEY, { name: "AES-CBC" }, false, ["decrypt"]);
+    const decrypted = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-CBC", iv: COVER_MEDIA_IV }, key, encrypted));
+    res.writeHead(200, {
+      "content-type": detectImageType(decrypted),
+      "content-disposition": "inline",
+      "cache-control": "public, max-age=86400",
+      "access-control-allow-origin": "*"
+    });
+    res.end(Buffer.from(decrypted));
+  } catch {
+    res.writeHead(502, { "content-type": "text/plain; charset=utf-8", "access-control-allow-origin": "*" });
+    res.end("Cover decrypt failed");
+  }
+}
+
 /* ---------- 6) 启动服务 ---------- */
 const server = createServer(async (req, res) => {
-  const pathname = new URL(req.url, "http://x").pathname;
+  const url = new URL(req.url, "http://x");
+  const pathname = url.pathname;
   if (pathname === "/duanju.js") return serveDuanju(res);
+  if (pathname === "/cover") return serveCover(req, res, url.searchParams);
   try {
     const request = await toWebRequestWithBody(req);
     const response = await worker.fetch(request, env, ctx);
