@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
 # ============================================================
-#  红果短剧 API — VPS 一键部署
+#  红果 · 黄果 短剧 API — VPS 一键部署
+#  一行命令直接拉取仓库文件安装：
+#    curl -sL https://raw.githubusercontent.com/MakkaPakka518/duanju/main/install.sh | sudo bash
 #  交互式询问端口，直接回车默认 6666；自动装 Node、生成
-#  STREAM_SECRET、生成 duanju.js（Forward 模块）并注册 systemd。
+#  STREAM_SECRET、生成 duanju.js（合并模块）并注册 systemd。
 # ============================================================
 set -e
 
 if [ "$(id -u)" -ne 0 ]; then
-  echo "❌ 请用 root 运行: sudo bash install.sh"
+  echo "❌ 请用 root 运行: sudo bash install.sh 或上面的一行命令"
   exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 INSTALL_DIR="/opt/duanju"
 
-# 仓库 raw 地址（用于一行 curl 部署时自动下载文件）
+# 仓库 raw 地址（一键部署时直接从仓库下载全部文件）
 REPO_BASE="https://raw.githubusercontent.com/MakkaPakka518/duanju/main"
 SRC_FILES="cenc.js crypto.js hongguo.js hongguo-signing.js index.js signing-data.js signing-hash.js signing.js"
 
@@ -25,23 +26,6 @@ fetch_raw() {
   echo "    下载 $url"
   curl -fsSL "$url" -o "$out" || { echo "❌ 下载失败: $url"; exit 1; }
 }
-
-# 准备源码：本地目录有文件则用本地，否则从仓库下载到临时目录
-SRC=""
-if [ -f "$SCRIPT_DIR/server.js" ]; then
-  SRC="$SCRIPT_DIR"
-else
-  SRC="$(mktemp -d)"
-  echo ">>> 从仓库下载项目文件 ..."
-  fetch_raw "server.js"             "$SRC/server.js"
-  fetch_raw "package.json"          "$SRC/package.json"
-  fetch_raw "generate-duanju.js"    "$SRC/generate-duanju.js"
-  fetch_raw "duanju.template.js"    "$SRC/duanju.template.js"
-  mkdir -p "$SRC/src"
-  for f in $SRC_FILES; do
-    fetch_raw "src/$f" "$SRC/src/$f"
-  done
-fi
 
 echo "================================================"
 echo "  红果短剧 API · VPS 一键部署"
@@ -105,14 +89,16 @@ echo ">>> 使用 Node: $NODE_BIN"
 # ---------- 4) 生成 STREAM_SECRET ----------
 SECRET="$(openssl rand -hex 32 2>/dev/null || head -c64 /dev/urandom | tr -dc 'a-f0-9' | head -c64)"
 
-# ---------- 5) 拷贝文件到安装目录 ----------
-echo ">>> 安装到 $INSTALL_DIR ..."
-mkdir -p "$INSTALL_DIR"
-cp -r "$SRC/src"        "$INSTALL_DIR/src"
-cp "$SRC/server.js"     "$INSTALL_DIR/server.js"
-cp "$SRC/package.json"  "$INSTALL_DIR/package.json"
-cp "$SRC/generate-duanju.js" "$INSTALL_DIR/generate-duanju.js"
-cp "$SRC/duanju.template.js" "$INSTALL_DIR/duanju.template.js"
+# ---------- 5) 从仓库拉取全部文件到安装目录 ----------
+echo ">>> 从仓库下载项目文件到 $INSTALL_DIR ..."
+mkdir -p "$INSTALL_DIR/src"
+fetch_raw "server.js"             "$INSTALL_DIR/server.js"
+fetch_raw "package.json"          "$INSTALL_DIR/package.json"
+fetch_raw "generate-duanju.js"    "$INSTALL_DIR/generate-duanju.js"
+fetch_raw "duanju.template.js"    "$INSTALL_DIR/duanju.template.js"
+for f in $SRC_FILES; do
+  fetch_raw "src/$f" "$INSTALL_DIR/src/$f"
+done
 
 # ---------- 6) 写环境配置 ----------
 cat > "$INSTALL_DIR/.env" <<EOF
@@ -178,4 +164,4 @@ echo "    方式1：直接填 duanju.js 地址  $PUBLIC_IP:$PORT/duanju.js"
 echo "    方式2：下载后把 apiBase 填成 http://$PUBLIC_IP:$PORT"
 echo ""
 echo "  查看状态: systemctl status duanju   日志: journalctl -u duanju -f"
-echo "  卸载:     bash uninstall.sh"
+echo "  卸载:     curl -sL https://raw.githubusercontent.com/MakkaPakka518/duanju/main/uninstall.sh | sudo bash"

@@ -23,15 +23,30 @@ uninstall.sh           一键卸载
 test/smoke.test.js     服务冒烟测试（npm test）
 ```
 
-## 部署
-把整个文件夹传到 VPS 后（root 或 sudo）：
+## 一键部署
+在 VPS 上（root）直接运行，脚本会**自动从仓库拉取全部文件**到 `/opt/duanju` 并安装：
+
 ```bash
-sudo bash install.sh
+curl -sL https://raw.githubusercontent.com/MakkaPakka518/duanju/main/install.sh | sudo bash
 ```
-按提示输入端口（**直接回车默认 6666**）。完成后脚本会打印：
+
+按提示输入端口（**直接回车默认 6666**）。脚本自动完成：
+1. 询问端口（默认 6666）
+2. 自动装 Node 20（如缺）
+3. 从仓库下载 `server.js` / `src/` / `duanju.template.js` / `generate-duanju.js`
+4. 生成随机 `STREAM_SECRET`
+5. 生成 `duanju.js`（合并模块，apiBase + coverWorker 自动指向本机）
+6. 注册 systemd 并启动、放行防火墙、健康检查
+
+完成后脚本会打印：
 - **API 地址**：`http://<IP>:6666`
 - **duanju.js 地址**：`http://<IP>:6666/duanju.js`（合并模块）
 - **STREAM_SECRET**：红果播放 token 密钥（留存）
+
+卸载：
+```bash
+curl -sL https://raw.githubusercontent.com/MakkaPakka518/duanju/main/uninstall.sh | sudo bash
+```
 
 ## 在 Forward 里添加模块
 直接填 `http://<IP>:6666/duanju.js` 即可。模块已内置：
@@ -44,7 +59,8 @@ sudo bash install.sh
 ```bash
 systemctl status duanju        # 状态
 journalctl -u duanju -f        # 日志
-sudo bash uninstall.sh         # 卸载
+# 卸载（一行命令）
+curl -sL https://raw.githubusercontent.com/MakkaPakka518/duanju/main/uninstall.sh | sudo bash
 ```
 
 ## 可选环境变量
