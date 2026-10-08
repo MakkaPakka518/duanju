@@ -1,6 +1,6 @@
 # 红果 · 黄果 短剧 API · VPS 一键部署版
 
-把「红果短剧」与「黄果短剧」的目录/搜索/详情/播放能力做成 **VPS 上跑的 Node 服务**（零外部依赖，用 Node 18+ 自带全局 API），安装脚本一键部署，并**自动生成合并后的 `duanju.js`**——一个 fw/rex 的 Forward 聚合模块，包含「红果」「黄果」两个大类及其细分频道。
+把「红果短剧」与「黄果短剧」的目录/搜索/详情/播放能力做成 **VPS 上跑的 Node 服务**（零外部依赖，用 Node 18+ 自带全局 API），安装脚本一键部署，并**自动生成合并后的 `duanju.js`**——一个 **Rex 聚合模块**，包含「红果」「黄果」两个大类及其细分频道。
 
 ## 特性
 - **交互式一键部署**：询问端口，直接回车默认 `6666`；自动装 Node、生成 `STREAM_SECRET`、注册 systemd、生成 `duanju.js`。
@@ -48,7 +48,7 @@ curl -sL https://raw.githubusercontent.com/MakkaPakka518/duanju/main/install.sh 
 curl -sL https://raw.githubusercontent.com/MakkaPakka518/duanju/main/uninstall.sh | sudo bash
 ```
 
-## 在 Forward 里添加模块
+## 在 Rex 里添加模块
 直接填 `http://<IP>:6666/duanju.js` 即可。模块已内置：
 - 红果 API 地址（`apiBase`）= `http://<IP>:6666`
 - 黄果封面代理（`coverWorker`）= `http://<IP>:6666/cover`
