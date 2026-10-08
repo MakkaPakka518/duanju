@@ -1,0 +1,15 @@
+{
+  "name": "hongguo-vps",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "红果短剧 API（VPS 版）：目录/搜索/详情/播放，自动生成 duanju.js Forward 模块",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "generate": "node generate-duanju.js",
+    "test": "node --test test/smoke.test.js"
+  }
+}
